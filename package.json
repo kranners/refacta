@@ -20,8 +20,16 @@
   "contributes": {
     "commands": [
       {
-        "command": "refacta.getSymbols",
-        "title": "Get symbols at location"
+        "command": "refacta.generateAst",
+        "title": "Generate AST for current file"
+      },
+      {
+        "command": "refacta.astAtCursor",
+        "title": "Show node at current cursor"
+      },
+      {
+        "command": "refacta.isIfElse",
+        "title": "Is this an if/else statement?"
       }
     ]
   },

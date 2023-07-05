@@ -1,26 +1,76 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-import * as vscode from 'vscode';
+import * as fs from "fs";
+import * as ts from "typescript";
+import * as vscode from "vscode";
+import * as parser from "./parser";
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+    const generateAst = vscode.commands.registerCommand(
+        "refacta.generateAst",
+        () => {
+            const context = parser.getActiveDocumentContext();
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "refacta" is now active!');
+            if (context === undefined) {
+                return;
+            }
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('refacta.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from refacta!');
-	});
+            const ast = parser.astAtNode(context.source, context.source);
 
-	context.subscriptions.push(disposable);
+            fs.writeFileSync(
+                `${context.source.fileName}.ast.json`,
+                JSON.stringify(ast, null, 2)
+            );
+        }
+    );
+
+    const isThisAnIfElse = vscode.commands.registerCommand(
+        "refacta.isIfElse",
+        () => {
+            const node = parser.getActiveNode();
+
+            if (node === undefined) {
+                return;
+            }
+
+            const containingIf = parser.getContainingIfStatement(node);
+
+            if (containingIf === undefined) {
+                return;
+            }
+
+            if (parser.isIfElseStatement(containingIf)) {
+                return vscode.window.showInformationMessage("yes");
+            }
+
+            return vscode.window.showInformationMessage("no");
+        }
+    );
+
+    const getAstFromCursor = vscode.commands.registerCommand(
+        "refacta.astAtCursor",
+        () => {
+            const node = parser.getActiveNode();
+
+            if (node === undefined) {
+                return;
+            }
+
+            // Get the node's syntax kind and text
+            const kind = ts.SyntaxKind[node.kind];
+            const text = node.getFullText();
+
+            return vscode.window.showInformationMessage(
+                JSON.stringify({
+                    kind,
+                    text,
+                    pos: node.pos,
+                })
+            );
+        }
+    );
+
+    context.subscriptions.push(generateAst);
+    context.subscriptions.push(isThisAnIfElse);
+    context.subscriptions.push(getAstFromCursor);
 }
 
-// This method is called when your extension is deactivated
 export function deactivate() {}
