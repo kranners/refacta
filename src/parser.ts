@@ -1,6 +1,8 @@
 import * as ts from "typescript";
 import * as vscode from "vscode";
 
+const printer = ts.createPrinter();
+
 export type AstNode = {
     kind: string;
     text: string;
@@ -14,6 +16,29 @@ export type DocumentContext = {
     document: vscode.TextDocument;
     cursor: vscode.Position;
     source: ts.SourceFile;
+};
+
+export type ActionContext = {
+    source: ts.SourceFile;
+    cursor: number;
+    node?: ts.Node;
+};
+
+export const getActiveActionContext = (
+    document: vscode.TextDocument,
+    range: vscode.Range | vscode.Selection
+): ActionContext => {
+    const source = ts.createSourceFile(
+        document.fileName,
+        document.getText(),
+        ts.ScriptTarget.Latest,
+        true
+    );
+
+    const cursor = getSourcePositionFromVscode(range.start, source);
+    const node = getAstNodeAtPosition(source, cursor);
+
+    return { source, cursor, node };
 };
 
 /**
@@ -132,14 +157,18 @@ export const getActiveNode = (): ts.Node | undefined => {
 };
 
 /**
- * Takes in a node that may be a child of an IfStatement. Will either return its' containing IfStatement, or undefined.
+ * Takes in a node that may be a child of a T (say, an IfStatement).
+ * Will either return that containing T statement, or undefined if it does not exist.
  *
- * @param node The node that is possibly contained inside an if statement.
+ * @param node A node that is possibly contained in a T.
+ * @param isValid A valid type guard (usually provided by TypeScript) to check if a ts.Node is a T.
+ * @returns
  */
-export const getContainingIfStatement = (
-    node: ts.Node
-): ts.Node | undefined => {
-    while (!ts.isIfStatement(node)) {
+export const getContainingStatement = <T extends ts.Node>(
+    node: ts.Node,
+    isValid: (node: any) => node is T
+): T | undefined => {
+    while (!isValid(node)) {
         if (ts.isSourceFile(node.parent)) {
             return undefined;
         }
@@ -150,24 +179,42 @@ export const getContainingIfStatement = (
     return node;
 };
 
-/**
- * Takes in an if statement node and returns if it is a part of an if/else statement or not.
- * i.e. This is true:
- *
- * if (bool) {} else {};
- *
- * This is false:
- *
- * if (bool) {} else if (otherBool) {};
- *
- * @param node An if statement node.
- * @returns
- */
-export const isIfElseStatement = (node: ts.Node): boolean => {
-    // If this isn't an if statement at all, leave.
-    if (!ts.isIfStatement(node)) {
-        return false;
+export type ExtractedStatements = {
+    thenStatements: ts.Statement[];
+    elseStatements: ts.Statement[];
+};
+
+export const getBlockStatements = (
+    block: ts.Block,
+    addMissingReturn?: boolean
+): ts.Statement[] => {
+    // If we are lacking a return statement, and wish to add one, then add one in and return.
+    if (addMissingReturn && !block.statements.some(ts.isReturnStatement)) {
+        return [...block.statements, ts.factory.createReturnStatement()];
     }
 
-    return node.getChildren().filter(ts.isBlock).length > 1;
+    return [...block.statements];
+};
+
+export const printNode = (given: ts.Node, source: ts.SourceFile) =>
+    printer.printNode(ts.EmitHint.Unspecified, given, source);
+
+export const getNodeArrayFullText = (
+    given: ts.Node[],
+    source: ts.SourceFile
+): string => {
+    return given.map((node) => printNode(node, source)).join("\n");
+};
+
+export const getVscodeRangeOfNode = (
+    node: ts.Node,
+    source: ts.SourceFile
+): vscode.Range => {
+    const start = ts.getLineAndCharacterOfPosition(source, node.pos);
+    const end = ts.getLineAndCharacterOfPosition(source, node.end);
+
+    return new vscode.Range(
+        new vscode.Position(start.line, start.character),
+        new vscode.Position(end.line, end.character)
+    );
 };

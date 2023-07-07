@@ -17,22 +17,6 @@
     "onLanguage:typescript",
     "onLanguage:typescriptreact"
   ],
-  "contributes": {
-    "commands": [
-      {
-        "command": "refacta.generateAst",
-        "title": "Generate AST for current file"
-      },
-      {
-        "command": "refacta.astAtCursor",
-        "title": "Show node at current cursor"
-      },
-      {
-        "command": "refacta.isIfElse",
-        "title": "Is this an if/else statement?"
-      }
-    ]
-  },
   "main": "./out/extension.js",
   "scripts": {
     "vscode:prepublish": "npm run compile",
