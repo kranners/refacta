@@ -2,6 +2,13 @@ import * as ts from "typescript";
 import * as vscode from "vscode";
 import * as parser from "./parser";
 
+/**
+ * Takes in an expression, and applies the ! exclamation token to it.
+ * If the expression already has a ! token, it will return the expression without it.
+ *
+ * @param expression A logical expression to invert
+ * @returns An NOT'd equivalent of that expression
+ */
 const invertExpression = (expression: ts.Expression): ts.Expression => {
     // If this is a !expression, then just remove the exclamation token.
     if (
@@ -16,6 +23,26 @@ const invertExpression = (expression: ts.Expression): ts.Expression => {
         ts.SyntaxKind.ExclamationToken,
         expression
     );
+};
+
+/**
+ * Takes in a block (like one from a IfStatement.thenStatement) and returns a list of
+ * its containing Statements. Will also optionally add in an empty return at the end.
+ *
+ * @param block A given block to grab the statements of
+ * @param addMissingReturn Whether to add a missing return or not
+ * @returns
+ */
+const getBlockStatements = (
+    block: ts.Block,
+    addMissingReturn?: boolean
+): ts.Statement[] => {
+    // If we are lacking a return statement, and wish to add one, then add one in and return.
+    if (addMissingReturn && !block.statements.some(ts.isReturnStatement)) {
+        return [...block.statements, ts.factory.createReturnStatement()];
+    }
+
+    return [...block.statements];
 };
 
 export class IfFlipper implements vscode.CodeActionProvider {
@@ -67,11 +94,11 @@ export class IfFlipper implements vscode.CodeActionProvider {
         document: vscode.TextDocument,
         source: ts.SourceFile
     ): vscode.CodeAction => {
-        const thenContents = parser.getBlockStatements(
+        const thenContents = getBlockStatements(
             ifStatement.thenStatement as ts.Block,
             true
         );
-        const elseContents = parser.getBlockStatements(
+        const elseContents = getBlockStatements(
             ifStatement.elseStatement as ts.Block
         );
 
@@ -102,10 +129,10 @@ export class IfFlipper implements vscode.CodeActionProvider {
         document: vscode.TextDocument,
         source: ts.SourceFile
     ): vscode.CodeAction => {
-        const thenContents = parser.getBlockStatements(
+        const thenContents = getBlockStatements(
             ifStatement.thenStatement as ts.Block
         );
-        const elseContents = parser.getBlockStatements(
+        const elseContents = getBlockStatements(
             ifStatement.elseStatement as ts.Block,
             true
         );

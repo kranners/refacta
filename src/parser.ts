@@ -3,15 +3,6 @@ import * as vscode from "vscode";
 
 const printer = ts.createPrinter();
 
-export type AstNode = {
-    kind: string;
-    text: string;
-    pos: number;
-    flags?: ts.NodeFlags;
-    index?: number;
-    children: AstNode[] | undefined;
-};
-
 export type DocumentContext = {
     document: vscode.TextDocument;
     cursor: vscode.Position;
@@ -53,33 +44,6 @@ export const getSourcePositionFromVscode = (
     source: ts.SourceFile
 ) => {
     return source.getPositionOfLineAndCharacter(cursor.line, cursor.character);
-};
-
-/**
- * Generates a minified version of the AST from a given node, cascading down.
- * To generate the entire AST of a file, pass the SourceFile as both the node and source.
- *
- * @param node A node in a given source, usually the SourceFile itself.
- * @param source A SourceFile which contains the given node.
- * @returns
- */
-export const astAtNode = (node: ts.Node, source: ts.SourceFile): AstNode => {
-    // Get the node's syntax kind and text.
-    const kind = ts.SyntaxKind[node.kind];
-    const text = node.getFullText(source);
-
-    // Recurse the children down below this node.
-    const children: AstNode[] = node
-        .getChildren()
-        .map((child) => astAtNode(child, source));
-
-    return {
-        kind,
-        text,
-        pos: node.pos,
-        flags: node.flags,
-        children,
-    };
 };
 
 export const getActiveDocumentContext = (): DocumentContext | undefined => {
@@ -182,18 +146,6 @@ export const getContainingStatement = <T extends ts.Node>(
 export type ExtractedStatements = {
     thenStatements: ts.Statement[];
     elseStatements: ts.Statement[];
-};
-
-export const getBlockStatements = (
-    block: ts.Block,
-    addMissingReturn?: boolean
-): ts.Statement[] => {
-    // If we are lacking a return statement, and wish to add one, then add one in and return.
-    if (addMissingReturn && !block.statements.some(ts.isReturnStatement)) {
-        return [...block.statements, ts.factory.createReturnStatement()];
-    }
-
-    return [...block.statements];
 };
 
 export const printNode = (given: ts.Node, source: ts.SourceFile) =>
