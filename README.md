@@ -2,6 +2,22 @@
 
 Provides refactoring tools for legacy TypeScript codebases.
 
+### Installation
+
+This extension is not published on the VSCode marketplace, but you can install it from source pretty easily:
+
+_This uses `bun`, but you could just as easily use `npm` or `yarn`._
+```shell
+# Install the requirements
+bun install
+
+# Build from source
+bun package
+
+# Install the extension into VSCode
+code --install-extension refacta-0.0.1.vsix
+```
+
 
 ### Features
 
